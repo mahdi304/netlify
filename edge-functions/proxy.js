@@ -1,6 +1,6 @@
-const TARGET_URL = (Netlify.env.get("TARGET_DOMAIN") || "").replace(/\/$/, "");
+const TARGET_BASE = (Netlify.env.get("TARGET_DOMAIN") || "").replace(/\/$/, "");
 
-const STRIP_HEAD = new Set([
+const STRIP_HEADERS = new Set([
   "host",
   "connection",
   "keep-alive",
@@ -17,34 +17,34 @@ const STRIP_HEAD = new Set([
 ]);
 
 export default async function handler(request) {
-  if (!TARGET_URL) {
+  if (!TARGET_BASE) {
     return new Response("Misconfigured: TARGET_DOMAIN is not set", { status: 500 });
   }
 
   try {
     const url = new URL(request.url);
-    const targetUrl = TARGET_URL + url.pathname + url.search;
+    const targetUrl = TARGET_BASE + url.pathname + url.search;
 
     const headers = new Headers();
-    let userIp = null;
+    let clientIp = null;
 
     for (const [key, value] of request.headers) {
-      const KE = key.toLowerCase();
-      if (STRIP_HEAD(KE)) continue;
-      if (KE.startsWith("x-nf-")) continue;
-      if (KE.startsWith("x-netlify-")) continue;
-      if (KE === "x-real-ip") {
-        userIp = value;
+      const k = key.toLowerCase();
+      if (STRIP_HEADERS.has(k)) continue;
+      if (k.startsWith("x-nf-")) continue;
+      if (k.startsWith("x-netlify-")) continue;
+      if (k === "x-real-ip") {
+        clientIp = value;
         continue;
       }
-      if (KE === "x-forwarded-for") {
-        if (!userIp) userIp = value;
+      if (k === "x-forwarded-for") {
+        if (!clientIp) clientIp = value;
         continue;
       }
-      headers.set(KE, value);
+      headers.set(k, value);
     }
 
-    if (userIp) headers.set("x-forwarded-for", userIp);
+    if (clientIp) headers.set("x-forwarded-for", clientIp);
 
     const method = request.method;
     const hasBody = method !== "GET" && method !== "HEAD";
@@ -72,6 +72,6 @@ export default async function handler(request) {
       headers: responseHeaders,
     });
   } catch (error) {
-    return new Response("Bad Gateway: Relay Failed", { status: 502 });
+    return new Response("Bad Gateway: Relay Failed" + " " + error, { status: 502 });
   }
 }
