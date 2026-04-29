@@ -30,7 +30,7 @@ export default async function handler(request) {
 
     for (const [key, value] of request.headers) {
       const KE = key.toLowerCase();
-      if (STRIP_HEAD(k)) continue;
+      if (STRIP_HEAD(KE)) continue;
       if (KE.startsWith("x-nf-")) continue;
       if (KE.startsWith("x-netlify-")) continue;
       if (KE === "x-real-ip") {
